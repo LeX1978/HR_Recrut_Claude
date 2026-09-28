@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(job-application-assistant)",
+      "Bash(bun run .agents/skills/linkedin-search/cli/src/cli.ts:*)",
+      "Bash(bun run .agents/skills/hh-search/cli/src/cli.ts:*)",
+      "Bash(bun run .agents/skills/freehire-search/cli/src/cli.ts:*)",
+      "Bash(python tools/rank_state.py:*)",
+      "Bash(python3 tools/rank_state.py:*)",
+      "Bash(python tools/job_key.py:*)",
+      "Bash(python3 tools/job_key.py:*)",
+      "Bash(python tools/verify_pdf.py:*)",
+      "Bash(python3 tools/verify_pdf.py:*)",
+      "Bash(python tools/verify_layout.py:*)",
+      "Bash(python3 tools/verify_layout.py:*)",
+      "Bash(pdftotext:*)",
+      "mcp__obsidian__vault_read",
+      "mcp__obsidian__vault_write",
+      "mcp__obsidian__vault_append",
+      "mcp__obsidian__vault_patch",
+      "mcp__obsidian__vault_get_document_map"
+    ]
+  }
+}

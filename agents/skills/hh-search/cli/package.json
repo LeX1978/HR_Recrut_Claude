@@ -1,0 +1,20 @@
+{
+  "name": "hh-search-cli",
+  "version": "1.0.0",
+  "description": "CLI for searching job vacancies on hh.ru (HeadHunter) via the official public JSON API. Requires an hh.ru app token (HH_CLIENT_ID/HH_CLIENT_SECRET in .env). Personal use.",
+  "type": "module",
+  "main": "src/cli.ts",
+  "bin": {
+    "hh-search": "src/cli.ts"
+  },
+  "scripts": {
+    "start": "bun run src/cli.ts",
+    "test": "bun test --timeout 30000",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/bun": "1.3.14"
+  }
+}
