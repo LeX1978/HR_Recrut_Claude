@@ -1,0 +1,75 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Cover Letter - MAGNIT TECH, Руководитель проекта Цепочки поставок
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[]{cover}
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\fancyhf{}
+
+\rfoot{Page \thepage \hspace{0pt}}
+\thispagestyle{empty}
+\renewcommand{\headrulewidth}{0pt}
+
+% cover.cls's Lato/Raleway fonts (OpenFonts/fonts/) are Latin-only and have
+% no Cyrillic glyphs - every Cyrillic character in a Russian-language letter
+% silently disappears from the rendered PDF, leaving only Latin punctuation
+% and numbers. Redefine the letter-content macros used below to use DejaVu
+% Sans (installed system-wide, full Cyrillic coverage) instead, keeping the
+% same sizes/colors/spacing the class defines.
+\renewcommand{\namesection}[3]{
+\centering{
+\fontsize{40pt}{60pt}
+\fontspec{DejaVu Sans}\bfseries\selectfont #1
+\fontspec{DejaVu Sans}\selectfont #2
+} \\[5pt]
+\centering{
+\color{headings}
+\fontspec{DejaVu Sans}\fontsize{11pt}{14pt}\selectfont #3}
+\noindent\makebox[\linewidth]{\color{headings}\rule{\paperwidth}{0.0pt}}
+\vspace{0pt}
+}
+\renewcommand{\currentdate}[1]{\raggedleft\fontspec{DejaVu Sans}\fontsize{11pt}{13pt}\selectfont {#1 \\} \normalfont}
+\renewcommand{\lettercontent}[1]{\raggedright\fontspec{DejaVu Sans}\fontsize{11pt}{13pt}\selectfont {#1 \\}\mbox{}\\ \normalfont}
+\renewcommand{\closing}[1]{\raggedright\fontspec{DejaVu Sans}\fontsize{11pt}{13pt}\selectfont {#1 \\}\mbox{}\\\mbox{}\\ \normalfont}
+\renewcommand{\signature}[1]{\raggedright\fontspec{DejaVu Sans}\fontsize{11pt}{13pt}\selectfont {#1 \\} \normalfont}
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     TITLE NAME
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\namesection{}{\Huge{Алексей Орлов}}{  \href{mailto:lex.orlov78@yandex.ru}{lex.orlov78@yandex.ru} | +7~(901)~797-54-88 |  \urlstyle{same}\href{https://www.linkedin.com/in/alex-orlov-v/}{LinkedIn}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     MAIN COVER LETTER CONTENT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\currentdate{\rutoday}
+\lettercontent{Здравствуйте, Мария,}
+
+\lettercontent{Меня заинтересовала позиция Руководителя проекта в Лаборатории ИИ: команда формируется практически с нуля, и её задача, как сказано в описании вакансии, не просто автоматизировать рутинные операции, а переосмыслить процессы товародвижения с помощью ML/AI. Это именно тот тип задач, где нужен человек, умеющий одновременно выстраивать процесс с нуля и вести людей через изменения. Компания уже системно инвестирует в ML для товародвижения (платформа прогнозирования спроса и пополнения запасов, подразделение AI.Lab), и мне интересно работать там, где эксперименты с ИИ становятся рабочим инструментом, а не декларацией.}
+
+\lettercontent{За 6 лет я провёл delivery-трансформацию в ООО «ПочтаТех» и Банке ВТБ, каждый раз выстраивая процесс с нуля:}
+
+{\raggedright\fontspec{DejaVu Sans}\fontsize{11pt}{13pt}\selectfont
+\begin{itemize}
+    \item \textbf{Приоритизация и планирование:} спроектировал единую модель приоритизации инициатив и квартального планирования в ПочтаТех, сократившую Time-to-Market примерно на 20\%
+    \item \textbf{Бизнес-метрики и отчётность:} настроил систему KPI и план-факт по срокам и стоимости, регулярно отчитывался перед CTO и руководителями направлений
+    \item \textbf{Координация команд и стейкхолдеров:} фасилитировал PI Planning и синхронизации между командами в ВТБ (до 15 команд, 70+ участников), снизил число конфликтов и блокеров на 35\%
+    \item \textbf{AI-инструменты в самом управлении проектом:} автоматизировал отчётность Python-скриптами через REST API Jira/Confluence и использую Claude Code для анализа данных и подготовки документов
+\end{itemize}\par}
+\vspace{6pt}
+
+\lettercontent{С формальными фреймворками RICE и MoSCoW напрямую не работал, но модель приоритизации, которую я построил в ПочтаТех, решает ту же задачу: ранжирует инициативы по бизнес-ценности и трудоёмкости, и я готов быстро адаптировать её под ваши процессы.}
+
+\lettercontent{Техническое образование (к.т.н.) позволяет разговаривать с разработчиками и архитекторами предметно, а сертификация ICF-коуча помогает вести команду через изменения без потери доверия. Буду рад обсудить, как мой опыт может ускорить запуск проектов Лаборатории ИИ.}
+
+\begin{flushright}
+\closing{С уважением,}
+
+\signature{Алексей Орлов}
+\end{flushright}
+\end{document}
