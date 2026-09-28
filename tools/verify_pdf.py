@@ -1,0 +1,212 @@
+#!/usr/bin/env python3
+"""Verify that a generated PDF has the expected pages and extractable text.
+
+Text-layer extraction tries pypdf (BSD, optional `pip install pypdf`) first,
+then Poppler `pdftotext` if pypdf is missing, raises, or returns zero
+extractable characters. Poppler remains the fallback.
+
+`--contains` compares after `normalize_text()` has folded both sides: whitespace,
+Unicode normalization form (NFC), and the typographic substitutions LaTeX makes to
+the source text. The fold is comparison-time only - the `--dump-text` output stays
+the raw text layer an ATS parser actually sees.
+"""
+
+import argparse
+import re
+import subprocess
+import sys
+import unicodedata
+from pathlib import Path
+
+
+class VerificationError(Exception):
+    """Raised when a generated PDF does not satisfy its checks."""
+
+
+def run_tool(command):
+    try:
+        return subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        ).stdout
+    except FileNotFoundError as exc:
+        raise VerificationError(
+            f"required command '{command[0]}' was not found. "
+            "Install pypdf (`pip install pypdf`) or poppler-utils "
+            "(macOS: brew install poppler, Debian/Ubuntu: apt install poppler-utils, "
+            "Windows: choco install poppler)"
+        ) from exc
+    except subprocess.CalledProcessError as exc:
+        detail = (exc.stderr or "").strip() or (exc.stdout or "").strip()
+        detail = detail or "command failed"
+        raise VerificationError(f"{command[0]} could not read the PDF: {detail}") from exc
+
+
+def parse_page_count(pdfinfo_output):
+    match = re.search(r"^Pages:\s+(\d+)\s*$", pdfinfo_output, re.MULTILINE)
+    if not match:
+        raise VerificationError("pdfinfo output did not contain a page count")
+    return int(match.group(1))
+
+
+# Typographic substitutions the moderncv/cover.cls templates produce from plain
+# source text, mapped back to what a user types into --contains. LaTeX ligatures
+# ' into U+2019 and -- into U+2013, so "Master's degree" and "2016-2024" are
+# absent from the text layer of a CV that plainly contains them (#385). Applied
+# to both sides of the comparison; the extracted dump is never rewritten.
+TYPOGRAPHIC_FOLDS = str.maketrans(
+    {
+        "\u2018": "'",  # ` -> quoteleft
+        "\u2019": "'",  # ' -> quoteright (the possessive apostrophe)
+        "\u201c": '"',  # `` -> quotedblleft
+        "\u201d": '"',  # '' -> quotedblright
+        "\u2013": "-",  # -- -> endash (the \cventry date-range case)
+        "\u2014": "-",  # --- -> emdash
+        "\u00a0": " ",  # ~ -> no-break space
+    }
+)
+
+
+def normalize_text(text):
+    """Fold a string for comparison: NFC, typographic punctuation, whitespace.
+
+    NFC covers the pdflatex text layer, which without T1 font encoding stores
+    accented letters decomposed (`e` + U+0300) while a user types them
+    precomposed (U+00E8); both forms fold to the same string (#384). The fold
+    applies to what is compared, never to what is dumped: the date-range rule in
+    `05-cv-templates.md` still needs the raw en-dash visible in `--dump-text`.
+    """
+    text = unicodedata.normalize("NFC", text).translate(TYPOGRAPHIC_FOLDS)
+    return " ".join(text.split())
+
+
+def _extract_pypdf(pdf_path):
+    """Return (text, pages) or None if pypdf is unavailable, raises, or yields no text."""
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        return None
+    try:
+        reader = PdfReader(str(pdf_path))
+        pages = len(reader.pages)
+        text = "\n".join((page.extract_text() or "") for page in reader.pages)
+    except Exception:
+        return None
+    # Harden: treat empty/degraded extraction as failure so we fall back
+    if len(normalize_text(text)) == 0:
+        return None
+    return text, pages
+
+
+def _extract_pdftotext(pdf_path):
+    text = run_tool(["pdftotext", "-layout", "-enc", "UTF-8", str(pdf_path), "-"])
+    # Always call pdfinfo here so the fallback path returns a page count
+    # even when the caller did not request --pages (same Poppler package).
+    pages = parse_page_count(run_tool(["pdfinfo", str(pdf_path)]))
+    return text, pages
+
+
+def extract_text_layer(pdf_path):
+    """Extract ATS-readable text. Returns (text, pages, extractor_name)."""
+    pypdf_result = _extract_pypdf(pdf_path)
+    if pypdf_result is not None:
+        text, pages = pypdf_result
+        return text, pages, "pypdf"
+    text, pages = _extract_pdftotext(pdf_path)
+    return text, pages, "pdftotext"
+
+
+def verify_pdf(pdf_path, expected_pages=None, min_chars=1, required_text=(), dump_text=None):
+    pdf_path = Path(pdf_path)
+    if not pdf_path.is_file():
+        raise VerificationError(f"PDF does not exist: {pdf_path}")
+
+    extracted_text, actual_pages, extractor = extract_text_layer(pdf_path)
+
+    # Write dump *before* the checks so a failed verification still leaves a .txt
+    if dump_text is not None:
+        dump_path = Path(dump_text)
+        try:
+            dump_path.parent.mkdir(parents=True, exist_ok=True)
+            dump_path.write_text(
+                extracted_text if extracted_text.endswith("\n") else extracted_text + "\n",
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            raise VerificationError(
+                f"could not write --dump-text to {dump_path}: {exc}"
+            ) from exc
+
+    if expected_pages is not None and actual_pages != expected_pages:
+        raise VerificationError(
+            f"expected {expected_pages} page(s), found {actual_pages} (extractor: {extractor})"
+        )
+
+    normalized = normalize_text(extracted_text)
+    if len(normalized) < min_chars:
+        raise VerificationError(
+            f"text layer has {len(normalized)} character(s); expected at least {min_chars} "
+            f"(extractor: {extractor})"
+        )
+
+    for required in required_text:
+        if normalize_text(required) not in normalized:
+            raise VerificationError(
+                f"text layer is missing required text: {required!r} (extractor: {extractor})"
+            )
+    return extractor, extracted_text, actual_pages
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(
+        description="Verify a PDF's page count and ATS-readable text layer."
+    )
+    parser.add_argument("pdf", type=Path, help="PDF file to verify")
+    parser.add_argument("--pages", type=int, help="required exact page count")
+    parser.add_argument(
+        "--min-chars",
+        type=int,
+        default=1,
+        help="minimum non-whitespace text-layer characters (default: 1)",
+    )
+    parser.add_argument(
+        "--contains",
+        action="append",
+        default=[],
+        help=(
+            "text that must appear in the text layer; both sides are folded for "
+            "whitespace, NFC, and LaTeX's typographic substitutions (curly "
+            "apostrophes/quotes, en/em dashes, no-break spaces); repeatable"
+        ),
+    )
+    parser.add_argument(
+        "--dump-text",
+        type=Path,
+        help="write the extracted text layer to this path (UTF-8)",
+    )
+    return parser
+
+
+def main(argv=None):
+    args = build_parser().parse_args(argv)
+    try:
+        extractor, text, pages = verify_pdf(
+            args.pdf,
+            args.pages,
+            args.min_chars,
+            args.contains,
+            dump_text=args.dump_text,
+        )
+    except VerificationError as exc:
+        print(f"Error: {args.pdf}: {exc}", file=sys.stderr)
+        return 1
+    print(f"Verified {args.pdf} (extractor: {extractor}, pages: {pages})")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
